@@ -391,7 +391,7 @@ function CGame(oData, iTeamChoosed) {
 
             _oArrow.setVisible(false);
         } else {
-        
+
             var vHitDir = new CVector2(data.point1 - data.point2, data.point3 - data.point4);
             vHitDir.scalarProduct(data.force);
             var fForceLength = vHitDir.length();
@@ -525,7 +525,7 @@ function CGame(oData, iTeamChoosed) {
     this.startMatch = function () {
         _bStartGame = true;
         _bFinish = false;
-
+        _oInterface.refreshScore(HOSTINFO.playerName);
         setVolume("soundtrack", SOUNDTRACK_VOLUME_IN_GAME);
         playSound("kick_off", 1, false);
     };
@@ -566,7 +566,7 @@ function CGame(oData, iTeamChoosed) {
 
         this.resetLevel();
 
-        _oInterface.refreshScore(_iTotScore);
+        _oInterface.refreshScore(HOSTINFO.playerName);
         _oInterface.createStartMatchText();
 
         this.tweenScrollStage(-_oBall.getX() + CANVAS_WIDTH_HALF);
@@ -610,12 +610,18 @@ function CGame(oData, iTeamChoosed) {
     };
 
     this.matchTime = function (fSecond) {
-        if (_fTimeMatch > 0) {
-            _fTimeMatch -= fSecond;
-            _oInterface.refreshTime(TEXT_TIME + ": " + Math.ceil(_fTimeMatch));
-        } else {
+
+        if (GAMEEND) {
             this.finishTime();
+        } else {
+            if (_fTimeMatch > 0) {
+                _fTimeMatch -= fSecond;
+                _oInterface.refreshTime(TEXT_TIME + ": " + Math.ceil(_fTimeMatch));
+            } else {
+                this.finishTime();
+            }
         }
+
     };
 
     this.finishTime = function () {
@@ -624,68 +630,95 @@ function CGame(oData, iTeamChoosed) {
         var bEnd = false;
         var oScore;
 
-        if (_iGoalPlayer === _iGoalOpponent && _bExtendedMatch === false) {
-            _oInterface.createExtendedTimeText();
-            _bExtendedMatch = true;
-            return;
-        }
-        if (_iGoalPlayer === _iGoalOpponent && _bExtendedMatch === true) {
-            _oInterface.createExtendedTimeText();
-            _bExtendedMatch = true;
-            _bExtendedMatchForGoal = true
-            return;
-        }
-
-        if (IS_HOST) {
-            window.parent.postMessage({ type: 'finished_soccer' }, '*');
-            if (_iGoalPlayer > _iGoalOpponent) {
-                window.socket.emit("gamefinished", {
-                    roomID: ROOM_ID,
-                    winnerID: PLAYER_ID
-                })
+        if (GAMEEND) {
+            if (IS_HOST) {
                 window.parent.postMessage({ type: "win_soccer", winner: PLAYER_ID }, "*");
                 bWin = true;
                 playSound("goal", 1, false);
                 oScore = this.calculateNewScore();
                 this.storesResult();
                 _iTotScore = oScore.new_score = oScore.new_score + _iLevelScore;
-                _oInterface.refreshScore(_iTotScore);
+
                 if (_iLevel === TOT_MATCH - 1) {
                     bEnd = true;
                 }
             } else {
-                bWin = false;
-                oScore = _iTotScore + _iLevelScore;
                 playSound("game_over", 1, false);
+                oScore = this.calculateNewScore();
+                this.storesResult();
+                _iTotScore = oScore.new_score = oScore.new_score + _iLevelScore;
+                // _oInterface.refreshScore(_iTotScore);
+                if (_iLevel === TOT_MATCH - 1) {
+                    bEnd = true;
+                }
             }
+            _oInterface.createEndMatchText(_iGoalPlayer, _iGoalOpponent, bWin, oScore, bEnd);
         } else {
-            window.parent.postMessage({ type: 'finished_soccer' }, '*');
-            if (_iGoalPlayer > _iGoalOpponent) {
-                bWin = false;
-                playSound("game_over", 1, false);
-                oScore = this.calculateNewScore();
-                this.storesResult();
-                _iTotScore = oScore.new_score = oScore.new_score + _iLevelScore;
-                _oInterface.refreshScore(_iTotScore);
-                if (_iLevel === TOT_MATCH - 1) {
-                    bEnd = true;
+            if (_iGoalPlayer === _iGoalOpponent && _bExtendedMatch === false) {
+                _oInterface.createExtendedTimeText();
+                _bExtendedMatch = true;
+                return;
+            }
+            if (_iGoalPlayer === _iGoalOpponent && _bExtendedMatch === true) {
+                _oInterface.createExtendedTimeText();
+                _bExtendedMatch = true;
+                _bExtendedMatchForGoal = true
+                return;
+            }
+
+            if (IS_HOST) {
+                window.parent.postMessage({ type: 'finished_soccer' }, '*');
+                if (_iGoalPlayer > _iGoalOpponent) {
+                    window.socket.emit("gamefinished", {
+                        roomID: ROOM_ID,
+                        winnerID: PLAYER_ID
+                    })
+                    window.parent.postMessage({ type: "win_soccer", winner: PLAYER_ID }, "*");
+                    bWin = true;
+                    playSound("goal", 1, false);
+                    oScore = this.calculateNewScore();
+                    this.storesResult();
+                    _iTotScore = oScore.new_score = oScore.new_score + _iLevelScore;
+
+                    if (_iLevel === TOT_MATCH - 1) {
+                        bEnd = true;
+                    }
+                } else {
+                    bWin = false;
+                    oScore = _iTotScore + _iLevelScore;
+                    playSound("game_over", 1, false);
                 }
             } else {
-                window.socket.emit("gamefinished", {
-                    roomID: ROOM_ID,
-                    winnerID: PLAYER_ID
-                })
-                window.parent.postMessage({ type: "win_soccer", winner: PLAYER_ID }, "*");
-                bWin = true;
-                oScore = _iTotScore + _iLevelScore;
-                playSound("goal", 1, false);
+                window.parent.postMessage({ type: 'finished_soccer' }, '*');
+                if (_iGoalPlayer > _iGoalOpponent) {
+                    bWin = false;
+                    playSound("game_over", 1, false);
+                    oScore = this.calculateNewScore();
+                    this.storesResult();
+                    _iTotScore = oScore.new_score = oScore.new_score + _iLevelScore;
+                    // _oInterface.refreshScore(_iTotScore);
+                    if (_iLevel === TOT_MATCH - 1) {
+                        bEnd = true;
+                    }
+                } else {
+                    window.socket.emit("gamefinished", {
+                        roomID: ROOM_ID,
+                        winnerID: PLAYER_ID
+                    })
+                    window.parent.postMessage({ type: "win_soccer", winner: PLAYER_ID }, "*");
+                    bWin = true;
+                    oScore = _iTotScore + _iLevelScore;
+                    playSound("goal", 1, false);
+                }
             }
+
+
+            $(s_oMain).trigger("end_level", _iLevel);
+
+            _oInterface.createEndMatchText(_iGoalPlayer, _iGoalOpponent, bWin, oScore, bEnd);
         }
 
 
-        $(s_oMain).trigger("end_level", _iLevel);
-
-        _oInterface.createEndMatchText(_iGoalPlayer, _iGoalOpponent, bWin, oScore, bEnd);
     };
 
     this.extendTime = function () {
@@ -832,7 +865,7 @@ function CGame(oData, iTeamChoosed) {
     };
 
     this.checkTurn = function () {
-        if(IS_HOST){
+        if (IS_HOST) {
             if (!_bCpuTurn) {
                 if (_iNumOfShot === 0) {
                     _iNumOfShot = NUM_OF_SHOT;
@@ -841,10 +874,11 @@ function CGame(oData, iTeamChoosed) {
                     if (_fTimePenality <= 0) {
                         _oInterface.turnAnim(TEXT_LAUNCH_DELAY_PENALTY);
                     } else {
-                        _oInterface.turnAnim(TEXT_CPU_TURN);
+                        _oInterface.turnAnim(PLAYERINFO.playerName + " " + "turn");
                     }
                     _oInterface.refreshTurnTeam(_aOpponentsTeamVs[_iLevel]);
                     this.cpuTurn();
+                    _oInterface.refreshScore(PLAYERINFO.playerName);
                 }
             } else {
                 if (_iNumOfShot === 0) {
@@ -854,9 +888,10 @@ function CGame(oData, iTeamChoosed) {
                     if (_fTimePenality <= 0) {
                         _oInterface.turnAnim(TEXT_LAUNCH_DELAY_PENALTY);
                     } else {
-                        _oInterface.turnAnim(TEXT_PLAYER_TURN);
+                        _oInterface.turnAnim(HOSTINFO.playerName + " " + "turn");
                     }
                     _oInterface.refreshTurnTeam(_iPlayerTeam);
+                    _oInterface.refreshScore(HOSTINFO.playerName);
                 } else {
                     this.cpuTurn();
                 }
@@ -870,9 +905,10 @@ function CGame(oData, iTeamChoosed) {
                     if (_fTimePenality <= 0) {
                         _oInterface.turnAnim(TEXT_LAUNCH_DELAY_PENALTY);
                     } else {
-                        _oInterface.turnAnim(TEXT_CPU_TURN);
+                        _oInterface.turnAnim(HOSTINFO.playerName + " " + "turn");
                     }
                     _oInterface.refreshTurnTeam(_iPlayerTeam);
+                    _oInterface.refreshScore(HOSTINFO.playerName);
                     this.cpuTurn();
                 }
             } else {
@@ -883,15 +919,16 @@ function CGame(oData, iTeamChoosed) {
                     if (_fTimePenality <= 0) {
                         _oInterface.turnAnim(TEXT_LAUNCH_DELAY_PENALTY);
                     } else {
-                        _oInterface.turnAnim(TEXT_PLAYER_TURN);
+                        _oInterface.turnAnim(PLAYERINFO.playerName + " " + "turn");
                     }
                     _oInterface.refreshTurnTeam(_aOpponentsTeamVs[_iLevel]);
+                    _oInterface.refreshScore(PLAYERINFO.playerName);
                 } else {
                     this.cpuTurn();
                 }
             }
         }
-       
+
     };
 
     this.activeAllTurnBall = function () {
@@ -934,24 +971,26 @@ function CGame(oData, iTeamChoosed) {
 
         _iNumOfShot = NUM_OF_SHOT;
         this.activeAllTurnBall();
-        if(IS_HOST){
+        if (IS_HOST) {
             _oInterface.refreshTurnTeam(_iPlayerTeam);
         } else {
             _oInterface.refreshTurnTeam(_aOpponentsTeamVs[_iLevel]);
         }
-       
+
 
         createjs.Tween.get(s_oScrollStage).to({ x: 0 }, 1000, createjs.Ease.cubicOut).call(function () {
             if (_bCpuTurn) {
-                _oInterface.turnAnim(TEXT_CPU_TURN);
+                _oInterface.turnAnim(PLAYERINFO.playerName + " " + "turn");
                 _iNumOfShot = NUM_OF_SHOT;
                 s_oGame.activeAllTurnBall();
                 _oInterface.refreshTurnTeam(_aOpponentsTeamVs[_iLevel]);
+                _oInterface.refreshScore(PLAYERINFO.playerName);
             } else {
-                _oInterface.turnAnim(TEXT_PLAYER_TURN);
+                _oInterface.turnAnim(HOSTINFO.playerName + " " + "turn");
                 _iNumOfShot = NUM_OF_SHOT;
                 s_oGame.activeAllTurnBall();
                 _oInterface.refreshTurnTeam(_iPlayerTeam);
+                _oInterface.refreshScore(HOSTINFO.playerName);
             }
             s_oGame.resetAllObjectPos();
             _bRestart = false;
@@ -962,12 +1001,17 @@ function CGame(oData, iTeamChoosed) {
     };
 
     this.matchTime = function (fSecond) {
-        if (_fTimeMatch > 0) {
-            _fTimeMatch -= fSecond;
-            _oInterface.refreshTime(TEXT_TIME + ": " + Math.ceil(_fTimeMatch));
+        if (GAMEEND) {
+            this.finishTime()
         } else {
-            this.finishTime();
+            if (_fTimeMatch > 0) {
+                _fTimeMatch -= fSecond;
+                _oInterface.refreshTime(TEXT_TIME + ": " + Math.ceil(_fTimeMatch));
+            } else {
+                this.finishTime();
+            }
         }
+
     };
 
     this.resetAllObjectPos = function () {
@@ -1464,7 +1508,7 @@ function CGame(oData, iTeamChoosed) {
         if (_bFinish) {
             return;
         }
-        if(IS_HOST){
+        if (IS_HOST) {
             if (!_bFoulCommitted) {
                 _bFoulCommitted = true;
                 playSound("kick_off", 1, false);
@@ -1476,18 +1520,20 @@ function CGame(oData, iTeamChoosed) {
                         this.addScore(0);
                     }
                     _bCpuTurn = true;
-                    _oInterface.turnAnim(TEXT_FOUL + " " + TEXT_CPU_TURN);
+                    _oInterface.turnAnim(TEXT_FOUL + " " + PLAYERINFO.playerName + " " + "turn");
                     _oInterface.refreshTurnTeam(_aOpponentsTeamVs[_iLevel]);
+                    _oInterface.refreshScore(PLAYERINFO.playerName);
                 } else {
                     _bCpuTurn = false;
-                    _oInterface.turnAnim(TEXT_FOUL + " " + TEXT_PLAYER_TURN);
+                    _oInterface.turnAnim(TEXT_FOUL + " " + HOSTINFO.playerName + " " + "turn");
                     _oInterface.refreshTurnTeam(_iPlayerTeam);
+                    _oInterface.refreshScore(HOSTINFO.playerName);
                 }
                 _iNumOfShot = NUM_OF_SHOT;
                 for (var i = 0; i < NUM_OF_SHOT; i++) {
                     _oInterface.refreshTurnNumber(i, true);
                 }
-            } 
+            }
         } else {
             if (!_bFoulCommitted) {
                 _bFoulCommitted = true;
@@ -1500,12 +1546,14 @@ function CGame(oData, iTeamChoosed) {
                         this.addScore(0);
                     }
                     _bCpuTurn = true;
-                    _oInterface.turnAnim(TEXT_FOUL + " " + TEXT_CPU_TURN);
+                    _oInterface.turnAnim(TEXT_FOUL + " " + HOSTINFO.playerName + " " + "turn");
                     _oInterface.refreshTurnTeam(_iPlayerTeam);
+                    _oInterface.refreshScore(HOSTINFO.playerName);
                 } else {
                     _bCpuTurn = false;
-                    _oInterface.turnAnim(TEXT_FOUL + " " + TEXT_PLAYER_TURN);
+                    _oInterface.turnAnim(TEXT_FOUL + " " + PLAYERINFO.playerName + " " + "turn");
                     _oInterface.refreshTurnTeam(_aOpponentsTeamVs[_iLevel]);
+                    _oInterface.refreshScore(PLAYERINFO.playerName);
                 }
                 _iNumOfShot = NUM_OF_SHOT;
                 for (var i = 0; i < NUM_OF_SHOT; i++) {
@@ -1513,7 +1561,7 @@ function CGame(oData, iTeamChoosed) {
                 }
             }
         }
-      
+
     };
 
     this.addScore = function (iVal) {
@@ -1521,7 +1569,7 @@ function CGame(oData, iTeamChoosed) {
             return;
         }
         _iLevelScore += iVal;
-        _oInterface.refreshScore(_iTotScore + _iLevelScore);
+        // _oInterface.refreshScore(_iTotScore + _iLevelScore);
     };
 
     this.followBall = function () {
@@ -1590,16 +1638,16 @@ function CGame(oData, iTeamChoosed) {
         if (_bStartGame) {
 
             if (IS_HOST && !_bCpuTurn && !_bPlayerLaunched) {
-                
-                    this.scrollWorld();
-                    this.arrowDraw();
-                    this.launchDelayPenality(FPS_TIME_SECONDS);
-                
+
+                this.scrollWorld();
+                this.arrowDraw();
+                this.launchDelayPenality(FPS_TIME_SECONDS);
+
             } else {
                 this.followBall();
             }
 
-            if(!IS_HOST && !_bCpuTurn && !_bPlayerLaunched){
+            if (!IS_HOST && !_bCpuTurn && !_bPlayerLaunched) {
                 this.scrollWorld();
                 this.arrowDraw();
                 this.launchDelayPenality(FPS_TIME_SECONDS);

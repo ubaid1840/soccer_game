@@ -24,7 +24,7 @@ function CLevelScoreBoard(oSprite, iX, iY) {
                     oSprite.width * 0.5 - 80, 14, 160, 22, 
                     22, "center", TEXT_COLOR, FONT_GAME, 1,
                     0, 0,
-                    "0 pt",
+                    "Name",
                     true, true, false,
                     false );
         _oScoreText.setStroke(3,"#ff6000");
@@ -44,7 +44,7 @@ function CLevelScoreBoard(oSprite, iX, iY) {
     };
 
     this.refresh = function (iVal) {
-        _oScoreText.refreshText(iVal + " " + TEXT_PT);
+        _oScoreText.refreshText(iVal);
     };
 
     this._init(oSprite, iX, iY);

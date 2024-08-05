@@ -105,7 +105,13 @@ io.on('connection', (socket) => {
                             room.gameStarted = true;
                             room.startTime = new Date().getTime()
                             await room.save();
-                            io.in(roomID).emit('startGame');
+                            io.in(roomID).emit('startGame',  {
+                                host: {
+                                    hostID: room.hostID,
+                                    hostName: room.hostName
+                                },
+                                players: room.players
+                            });
                         }
                     }
                 }, 5000);
@@ -140,12 +146,13 @@ io.on('connection', (socket) => {
                         timeStart: startTime
                     };
                     try {
+                        io.in(room.roomID).emit('gameEnd');
                         await axios.post(url, mydata, {
                             headers: {
                                 'sign': sign
                             }
                         }).then(async () => {
-                            io.in(data.roomID).emit('gamefinished');
+                            io.in(room.roomID).emit('gamefinished');
                             await Room.deleteOne({ roomID })
                         })
             
@@ -164,7 +171,6 @@ io.on('connection', (socket) => {
     });
 
     socket.on("launchPenalty", (data) => {
-        console.log(data)
         io.in(data.roomID).emit('launchPenaltyBy', data);
     });
 

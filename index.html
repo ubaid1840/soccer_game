@@ -153,16 +153,34 @@
           alert(data.message);
         });
 
-        socket.on("startGame", async () => {
+        socket.on("gameEnd", () => {
+          GAMEEND = true
+        });
+
+        socket.on("startGame", async (data) => {
+          console.log(data);
+          const host = data.host;
+          const players = data.players;
+          const newData = players.map((item) => {
+            if (item.playerID === host.hostID) {
+              HOSTINFO = {...item, host:true}
+              return { ...item, host: true };
+            } else {
+              PLAYERINFO = {...item, host:true}
+              return { ...item, host: false };
+            }
+          });
+        
+          GAMEINFO = newData
           startGame();
         });
 
-        window.addEventListener('beforeunload', (event) => {
-            socket.emit('playerDisconnectData');
+        window.addEventListener("beforeunload", (event) => {
+          socket.emit("playerDisconnectData");
         });
 
         socket.on("singlePlayerDisconnected", async (data) => {
-          console.log(data)
+          console.log(data);
         });
 
         function startGame() {
