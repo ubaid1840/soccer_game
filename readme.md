@@ -1,5 +1,8 @@
 # Getting Started
 
+## Firebase setup
+Create firebase project and download serviceAccountKey json file, rename it to service_key.json and place it into config folder 
+
 Run the server
 
 ```bash
